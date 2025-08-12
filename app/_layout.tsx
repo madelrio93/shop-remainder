@@ -1,3 +1,4 @@
+import { fontsFamily } from "@/constants/Fonts";
 import {
   DarkTheme,
   DefaultTheme,
@@ -6,8 +7,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
-import "react-native-reanimated";
+import { useEffect, useState } from "react";
 
 import { SplashScreen } from "@/components/SplashScreen";
 
@@ -16,9 +16,15 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  const [loaded, error] = useFonts({
+    [fontsFamily.regular]: require("../assets/fonts/Poppins-Regular.ttf"),
+    [fontsFamily.medium]: require("../assets/fonts/Poppins-Medium.ttf"),
+    [fontsFamily.bold]: require("../assets/fonts/Poppins-Bold.ttf"),
   });
+
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
 
   if (!loaded || !isAppReady) {
     return (
@@ -31,8 +37,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+        {/* <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> */}
+        {/* <Stack.Screen name="+not-found" /> */}
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
