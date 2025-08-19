@@ -1,9 +1,9 @@
+import { SocialConnectionsBar } from "@/components/SocialConnectionsBar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
 import { useSignIn } from "@clerk/clerk-expo";
-import AntDesignIcons from "@expo/vector-icons/AntDesign";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -133,22 +133,7 @@ export default function Login() {
         </View>
       </View>
 
-      <View style={{ gap: 10, marginTop: 20, alignItems: "center" }}>
-        <ThemedText
-          style={[{ color: Colors[colorScheme].text }, styles.linkIconTitle]}
-        >
-          Or continue with
-        </ThemedText>
-
-        <View style={styles.linksIconContainer}>
-          <AntDesignIcons name="google" size={24} style={styles.linkIcon} />
-          <AntDesignIcons
-            name="facebook-square"
-            size={24}
-            style={styles.linkIcon}
-          />
-        </View>
-      </View>
+      <SocialConnectionsBar />
     </ThemedView>
   );
 }
@@ -195,20 +180,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     fontFamily: fontsFamily.regular,
-  },
-  linkIconTitle: {
-    fontWeight: "semibold",
-    fontSize: 14,
-    fontFamily: fontsFamily.medium,
-  },
-  linksIconContainer: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  linkIcon: {
-    backgroundColor: "#ECECEC",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-  },
+  }
 });
