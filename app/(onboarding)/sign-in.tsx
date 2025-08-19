@@ -2,8 +2,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
+import { useSignIn } from "@clerk/clerk-expo";
 import AntDesignIcons from "@expo/vector-icons/AntDesign";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -15,12 +16,31 @@ import {
 
 export default function Login() {
   const colorScheme = useColorScheme() ?? "light";
+  const { signIn, setActive, isLoaded } = useSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
-    // TODO: Implement login logic
-    console.log("Logging in with:", email, password);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    if (!isLoaded) return;
+
+    try {
+      const signInAttempt = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (signInAttempt.status === "complete") {
+        await setActive({ session: signInAttempt.createdSessionId });
+
+        router.replace("/(tabs)");
+      } else {
+        console.log(JSON.stringify(signInAttempt, null, 2));
+      }
+    } catch (err) {
+      console.error(JSON.stringify(err, null, 2));
+    }
   };
 
   return (

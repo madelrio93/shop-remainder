@@ -2,8 +2,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
+import { useSignUp } from "@clerk/clerk-expo";
 import AntDesignIcons from "@expo/vector-icons/AntDesign";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -14,14 +15,54 @@ import {
 } from "react-native";
 
 export default function Register() {
+  const { isLoaded, signUp, setActive } = useSignUp();
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState("");
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
+  const handleRegister = async () => {
+    if (!isLoaded) return;
+
+    try {
+      const data = await signUp.create({
+        emailAddress: email,
+        password,
+      });
+
+      console.log({ data });
+
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+
+      setPendingVerification(true);
+    } catch (err) {
+      console.error(JSON.stringify(err, null, 2));
+    }
     console.log("Registering with:", email, password);
+  };
+
+  const onVerifyPress = async () => {
+    if (!isLoaded) return;
+
+    try {
+      const signUpAttempt = await signUp.attemptEmailAddressVerification({
+        code,
+      });
+
+      if (signUpAttempt.status === "complete") {
+        await setActive({ session: signUpAttempt.createdSessionId });
+        router.replace("/(tabs)/index");
+      } else {
+        console.log(JSON.stringify(signUpAttempt, null, 2));
+      }
+    } catch (err) {
+      console.log(JSON.stringify(err, null, 2));
+    }
   };
 
   return (
@@ -31,9 +72,14 @@ export default function Register() {
         styles.container,
       ]}
     >
-      <View style={{ width: "100%", alignItems: "center" }}>
-        <ThemedText type="title">Create an account</ThemedText>
-        <View style={styles.formContainer}>
+      {pendingVerification ? (
+        <View
+          style={[
+            styles.formContainer,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <ThemedText type="title">Verify your email</ThemedText>
           <TextInput
             style={[
               styles.input,
@@ -42,95 +88,129 @@ export default function Register() {
                 color: Colors[colorScheme].text,
               },
             ]}
-            placeholder="Email"
+            placeholder="Enter your verification code"
+            onChangeText={(code) => setCode(code)}
             placeholderTextColor={Colors[colorScheme].text}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            value={code}
+            keyboardType="numeric"
             autoCapitalize="none"
-          />
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: Colors[colorScheme].tint,
-                color: Colors[colorScheme].text,
-              },
-            ]}
-            placeholder="Password"
-            placeholderTextColor={Colors[colorScheme].text}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: Colors[colorScheme].tint,
-                color: Colors[colorScheme].text,
-              },
-            ]}
-            placeholder="Confirm Password"
-            placeholderTextColor={Colors[colorScheme].text}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
           />
           <TouchableOpacity
             style={[
               styles.button,
               { backgroundColor: Colors[colorScheme].tint },
             ]}
-            onPress={handleRegister}
+            onPress={onVerifyPress}
           >
-            <ThemedText style={styles.buttonText}>Register</ThemedText>
+            <ThemedText style={styles.buttonText}>Verify</ThemedText>
           </TouchableOpacity>
-          <Link
-            href="/(onboarding)/sign-in"
-            asChild
-            style={[
-              styles.button,
-              {
-                backgroundColor: "#ffff",
-                width: "100%",
-              },
-            ]}
-          >
-            <TouchableOpacity>
-              <ThemedText
+        </View>
+      ) : (
+        <>
+          <View style={{ width: "100%", alignItems: "center", marginTop: 60 }}>
+            <ThemedText type="title">Create an account</ThemedText>
+            <View style={styles.formContainer}>
+              <TextInput
                 style={[
-                  styles.buttonText,
+                  styles.input,
                   {
+                    borderColor: Colors[colorScheme].tint,
                     color: Colors[colorScheme].text,
-                    fontSize: 16,
-                    fontWeight: "bold",
+                  },
+                ]}
+                placeholder="Email"
+                placeholderTextColor={Colors[colorScheme].text}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    borderColor: Colors[colorScheme].tint,
+                    color: Colors[colorScheme].text,
+                  },
+                ]}
+                placeholder="Password"
+                placeholderTextColor={Colors[colorScheme].text}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    borderColor: Colors[colorScheme].tint,
+                    color: Colors[colorScheme].text,
+                  },
+                ]}
+                placeholder="Confirm Password"
+                placeholderTextColor={Colors[colorScheme].text}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  { backgroundColor: Colors[colorScheme].tint },
+                ]}
+                onPress={handleRegister}
+              >
+                <ThemedText style={styles.buttonText}>Register</ThemedText>
+              </TouchableOpacity>
+              <Link
+                href="/(onboarding)/sign-in"
+                asChild
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: "#ffff",
+                    width: "100%",
                   },
                 ]}
               >
-                Already have an account
-              </ThemedText>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </View>
+                <TouchableOpacity>
+                  <ThemedText
+                    style={[
+                      styles.buttonText,
+                      {
+                        color: Colors[colorScheme].text,
+                        fontSize: 16,
+                        fontWeight: "bold",
+                      },
+                    ]}
+                  >
+                    Already have an account
+                  </ThemedText>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </View>
+          <View style={{ gap: 10, marginTop: 20, alignItems: "center" }}>
+            <ThemedText
+              style={[
+                { color: Colors[colorScheme].text },
+                styles.linkIconTitle,
+              ]}
+            >
+              Or continue with
+            </ThemedText>
 
-      <View style={{ gap: 10, marginTop: 20, alignItems: "center" }}>
-        <ThemedText
-          style={[{ color: Colors[colorScheme].text }, styles.linkIconTitle]}
-        >
-          Or continue with
-        </ThemedText>
-
-        <View style={styles.linksIconContainer}>
-          <AntDesignIcons name="google" size={24} style={styles.linkIcon} />
-          <AntDesignIcons
-            name="facebook-square"
-            size={24}
-            style={styles.linkIcon}
-          />
-        </View>
-      </View>
+            <View style={styles.linksIconContainer}>
+              <AntDesignIcons name="google" size={24} style={styles.linkIcon} />
+              <AntDesignIcons
+                name="facebook-square"
+                size={24}
+                style={styles.linkIcon}
+              />
+            </View>
+          </View>
+        </>
+      )}
     </ThemedView>
   );
 }
@@ -141,16 +221,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    marginTop: 60,
+    // marginTop: 60,
     gap: 10,
   },
   formContainer: {
     width: "100%",
-    marginTop: 40,
+    marginTop: 10,
     padding: 20,
     gap: 20,
   },
   input: {
+    width: "100%",
     height: 64,
     borderWidth: 2,
     borderRadius: 10,
@@ -162,6 +243,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 60,
+    width: "100%",
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",

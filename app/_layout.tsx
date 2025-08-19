@@ -10,8 +10,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import { SplashScreen } from "@/components/SplashScreen";
-
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { tokenCache } from "@clerk/clerk-expo/token-cache";
 
 export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -36,11 +37,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        {/* <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> */}
-        {/* <Stack.Screen name="+not-found" /> */}
-      </Stack>
+      <ClerkProvider tokenCache={tokenCache}>
+        <Stack>
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </ClerkProvider>
+
       <StatusBar style="auto" />
     </ThemeProvider>
   );
