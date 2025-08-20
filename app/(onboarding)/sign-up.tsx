@@ -1,9 +1,10 @@
 import { SocialConnectionsBar } from "@/components/SocialConnectionsBar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
-import { useSignUp } from "@clerk/clerk-expo";
+import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,19 +19,22 @@ export default function Register() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
+  const [errors, setErrors] = useState<boolean>(false);
+  const [credentials, setCredentials] = useState({
+    email: "",
+    password: "",
+  });
 
   const handleRegister = async () => {
     if (!isLoaded) return;
 
     try {
       const data = await signUp.create({
-        emailAddress: email,
-        password,
+        emailAddress: credentials.email,
+        password: credentials.password,
       });
 
       console.log({ data });
@@ -41,9 +45,13 @@ export default function Register() {
 
       setPendingVerification(true);
     } catch (err) {
+      if (isClerkAPIResponseError(err)) {
+        setErrors(true);
+      }
+
       console.error(JSON.stringify(err, null, 2));
     }
-    console.log("Registering with:", email, password);
+    console.log("Registering with:", credentials.email, credentials.password);
   };
 
   const onVerifyPress = async () => {
@@ -65,6 +73,15 @@ export default function Register() {
     }
   };
 
+  const handleChangeText = (name: "email" | "password") => (text: string) => {
+    errors && setErrors(false);
+
+    setCredentials({
+      ...credentials,
+      [name]: text,
+    });
+  };
+
   return (
     <ThemedView
       style={[
@@ -72,6 +89,7 @@ export default function Register() {
         styles.container,
       ]}
     >
+      {errors && <ErrorMessage />}
       {pendingVerification ? (
         <View
           style={[
@@ -120,8 +138,8 @@ export default function Register() {
                 ]}
                 placeholder="Email"
                 placeholderTextColor={Colors[colorScheme].text}
-                value={email}
-                onChangeText={setEmail}
+                value={credentials.email}
+                onChangeText={handleChangeText("email")}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -135,8 +153,8 @@ export default function Register() {
                 ]}
                 placeholder="Password"
                 placeholderTextColor={Colors[colorScheme].text}
-                value={password}
-                onChangeText={setPassword}
+                value={credentials.password}
+                onChangeText={handleChangeText("password")}
                 secureTextEntry
               />
               <TextInput
@@ -190,7 +208,7 @@ export default function Register() {
               </Link>
             </View>
           </View>
-          
+
           <SocialConnectionsBar />
         </>
       )}

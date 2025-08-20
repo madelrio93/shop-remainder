@@ -1,9 +1,10 @@
 import { SocialConnectionsBar } from "@/components/SocialConnectionsBar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
-import { useSignIn } from "@clerk/clerk-expo";
+import { isClerkAPIResponseError, useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -17,18 +18,21 @@ import {
 export default function Login() {
   const colorScheme = useColorScheme() ?? "light";
   const { signIn, setActive, isLoaded } = useSignIn();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [credentials, setCredentials] = useState({
+    email: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState<boolean>(false);
 
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!isLoaded) return;
-
+    setErrors(false);
     try {
       const signInAttempt = await signIn.create({
-        identifier: email,
-        password,
+        identifier: credentials.email,
+        password: credentials.password,
       });
 
       if (signInAttempt.status === "complete") {
@@ -39,9 +43,22 @@ export default function Login() {
         console.log(JSON.stringify(signInAttempt, null, 2));
       }
     } catch (err) {
+      if (isClerkAPIResponseError(err)) {
+        setErrors(true);
+      }
       console.error(JSON.stringify(err, null, 2));
     }
   };
+
+  const handleChangeText =
+    (name: "email" | "password") => (text: string) => {
+      errors && setErrors(false);
+
+      setCredentials({
+        ...credentials,
+        [name]: text
+      })
+    };
 
   return (
     <ThemedView
@@ -50,9 +67,10 @@ export default function Login() {
         styles.container,
       ]}
     >
-      <View style={{ width: "100%", alignItems: "center" }}>
+      {errors && <ErrorMessage />}
+      <View style={styles.formContainer}>
         <ThemedText type="title">Login here</ThemedText>
-        <View style={styles.formContainer}>
+        <View style={styles.form}>
           <TextInput
             style={[
               styles.input,
@@ -63,8 +81,9 @@ export default function Login() {
             ]}
             placeholder="Email"
             placeholderTextColor={Colors[colorScheme].text}
-            value={email}
-            onChangeText={setEmail}
+            value={credentials.email}
+            nativeID="email-input"
+            onChangeText={handleChangeText("email")}
             autoCapitalize="none"
           />
           <TextInput
@@ -77,8 +96,8 @@ export default function Login() {
             ]}
             placeholder="Password"
             placeholderTextColor={Colors[colorScheme].text}
-            value={password}
-            onChangeText={setPassword}
+            value={credentials.password}
+            onChangeText={handleChangeText("password")}
             secureTextEntry
           />
           <TouchableOpacity>
@@ -141,16 +160,19 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    padding: 20,
-    marginTop: 60,
-    gap: 10,
   },
   formContainer: {
     width: "100%",
-    marginTop: 40,
-    padding: 20,
+    marginTop: 60,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+  },
+  form: {
+    width: "100%",
+    marginTop: 20,
     gap: 20,
   },
   input: {
@@ -180,5 +202,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     fontFamily: fontsFamily.regular,
-  }
+  },
 });
