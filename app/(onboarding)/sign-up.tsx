@@ -1,9 +1,13 @@
 import { SocialConnectionsBar } from "@/components/SocialConnectionsBar";
+import { TextInputField } from "@/components/TextInputField";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
+import {
+  clerkErrorMapping,
+  ClerkInputFieldErrorTypes,
+} from "@/utils/clerkErrorMapper";
 import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -19,25 +23,40 @@ export default function Register() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
-  const [errors, setErrors] = useState<boolean>(false);
+  const [errors, setErrors] = useState<
+    {
+      confirmPassword: string;
+      apiResponse?: string;
+    } & ClerkInputFieldErrorTypes
+  >({
+    email_address: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleRegister = async () => {
     if (!isLoaded) return;
 
+    if (credentials.confirmPassword !== credentials.password) {
+      setErrors({
+        ...errors,
+        confirmPassword: "Passwords do not match",
+      });
+      return;
+    }
+
     try {
-      const data = await signUp.create({
+      await signUp.create({
         emailAddress: credentials.email,
         password: credentials.password,
       });
-
-      console.log({ data });
 
       await signUp.prepareEmailAddressVerification({
         strategy: "email_code",
@@ -46,12 +65,12 @@ export default function Register() {
       setPendingVerification(true);
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
-        setErrors(true);
+        setErrors({
+          ...errors,
+          ...clerkErrorMapping(err),
+        });
       }
-
-      console.error(JSON.stringify(err, null, 2));
     }
-    console.log("Registering with:", credentials.email, credentials.password);
   };
 
   const onVerifyPress = async () => {
@@ -73,14 +92,15 @@ export default function Register() {
     }
   };
 
-  const handleChangeText = (name: "email" | "password") => (text: string) => {
-    errors && setErrors(false);
+  const handleChangeText =
+    (name: "email" | "password" | "confirmPassword") => (text: string) => {
+      errors && setErrors({} as any);
 
-    setCredentials({
-      ...credentials,
-      [name]: text,
-    });
-  };
+      setCredentials({
+        ...credentials,
+        [name]: text,
+      });
+    };
 
   return (
     <ThemedView
@@ -89,7 +109,6 @@ export default function Register() {
         styles.container,
       ]}
     >
-      {errors && <ErrorMessage />}
       {pendingVerification ? (
         <View
           style={[
@@ -128,49 +147,30 @@ export default function Register() {
           <View style={{ width: "100%", alignItems: "center", marginTop: 60 }}>
             <ThemedText type="title">Create an account</ThemedText>
             <View style={styles.formContainer}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: Colors[colorScheme].tint,
-                    color: Colors[colorScheme].text,
-                  },
-                ]}
+              <TextInputField
                 placeholder="Email"
-                placeholderTextColor={Colors[colorScheme].text}
-                value={credentials.email}
-                onChangeText={handleChangeText("email")}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                value={credentials.email}
+                onChangeText={handleChangeText("email")}
+                errorMessage={errors.email_address}
               />
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: Colors[colorScheme].tint,
-                    color: Colors[colorScheme].text,
-                  },
-                ]}
+              <TextInputField
                 placeholder="Password"
-                placeholderTextColor={Colors[colorScheme].text}
+                secureTextEntry
                 value={credentials.password}
                 onChangeText={handleChangeText("password")}
-                secureTextEntry
+                errorMessage={errors.password}
               />
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: Colors[colorScheme].tint,
-                    color: Colors[colorScheme].text,
-                  },
-                ]}
+              <TextInputField
                 placeholder="Confirm Password"
-                placeholderTextColor={Colors[colorScheme].text}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
                 secureTextEntry
+                value={credentials.confirmPassword}
+                onChangeText={handleChangeText("confirmPassword")}
+                errorMessage={errors.confirmPassword}
               />
+
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -222,7 +222,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    // marginTop: 60,
     gap: 10,
   },
   formContainer: {
