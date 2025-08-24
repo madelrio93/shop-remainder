@@ -1,6 +1,8 @@
 import { ClerkAPIResponseError } from "@clerk/shared/error";
 
 export type ClerkInputFieldErrorTypes = {
+  identifier: string;
+  email?: string;
   email_address: string;
   password: string;
 };

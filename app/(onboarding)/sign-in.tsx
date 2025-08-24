@@ -1,15 +1,18 @@
 import { SocialConnectionsBar } from "@/components/SocialConnectionsBar";
+import { TextInputField } from "@/components/TextInputField";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
+import {
+  clerkErrorMapping,
+  ClerkInputFieldErrorTypes,
+} from "@/utils/clerkErrorMapper";
 import { isClerkAPIResponseError, useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -19,21 +22,22 @@ export default function Login() {
   const colorScheme = useColorScheme() ?? "light";
   const { signIn, setActive, isLoaded } = useSignIn();
   const [credentials, setCredentials] = useState({
-    email: "",
+    identifier: "",
     password: "",
   });
-  const [errors, setErrors] = useState<boolean>(false);
+  const [errors, setErrors] = useState<ClerkInputFieldErrorTypes>();
 
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!isLoaded) return;
-    setErrors(false);
+    // setErrors(false);
     try {
       const signInAttempt = await signIn.create({
-        identifier: credentials.email,
+        identifier: credentials.identifier,
         password: credentials.password,
       });
+      
 
       if (signInAttempt.status === "complete") {
         await setActive({ session: signInAttempt.createdSessionId });
@@ -44,21 +48,23 @@ export default function Login() {
       }
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
-        setErrors(true);
+        console.log(JSON.stringify(err, null, 2));
+        setErrors({
+          ...errors,
+          ...clerkErrorMapping(err),
+        });
       }
-      console.error(JSON.stringify(err, null, 2));
     }
   };
 
-  const handleChangeText =
-    (name: "email" | "password") => (text: string) => {
-      errors && setErrors(false);
+  const handleChangeText = (name: "identifier" | "password") => (text: string) => {
+    errors && setErrors({} as ClerkInputFieldErrorTypes);
 
-      setCredentials({
-        ...credentials,
-        [name]: text
-      })
-    };
+    setCredentials({
+      ...credentials,
+      [name]: text,
+    });
+  };
 
   return (
     <ThemedView
@@ -67,38 +73,25 @@ export default function Login() {
         styles.container,
       ]}
     >
-      {errors && <ErrorMessage />}
+      {/* {errors && <ErrorMessage message="Something went wrong" />} */}
       <View style={styles.formContainer}>
         <ThemedText type="title">Login here</ThemedText>
         <View style={styles.form}>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: Colors[colorScheme].tint,
-                color: Colors[colorScheme].text,
-              },
-            ]}
+          <TextInputField
             placeholder="Email"
-            placeholderTextColor={Colors[colorScheme].text}
-            value={credentials.email}
-            nativeID="email-input"
-            onChangeText={handleChangeText("email")}
+            keyboardType="email-address"
             autoCapitalize="none"
+            autoComplete="email"
+            value={credentials.identifier}
+            onChangeText={handleChangeText("identifier")}
+            errorMessage={errors?.identifier}
           />
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: Colors[colorScheme].tint,
-                color: Colors[colorScheme].text,
-              },
-            ]}
+          <TextInputField
             placeholder="Password"
-            placeholderTextColor={Colors[colorScheme].text}
+            secureTextEntry
             value={credentials.password}
             onChangeText={handleChangeText("password")}
-            secureTextEntry
+            errorMessage={errors?.password}
           />
           <TouchableOpacity>
             <ThemedText

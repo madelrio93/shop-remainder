@@ -31,6 +31,7 @@ export default function Register() {
       apiResponse?: string;
     } & ClerkInputFieldErrorTypes
   >({
+    identifier: "",
     email_address: "",
     password: "",
     confirmPassword: "",
