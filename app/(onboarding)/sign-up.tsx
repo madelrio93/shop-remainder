@@ -4,10 +4,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Colors } from "@/constants/Colors";
 import { fontsFamily } from "@/constants/Fonts";
-import {
-  clerkErrorMapping,
-  ClerkInputFieldErrorTypes,
-} from "@/utils/clerkErrorMapper";
+import { clerkErrorMapping } from "@/utils/clerkErrorMapper";
 import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -19,25 +16,24 @@ import {
   View,
 } from "react-native";
 
+type Credentials = {
+  emailAddress: string;
+  password: "";
+  confirmPassword: "";
+};
+
+type SignUpErrors = Partial<Record<keyof Credentials | "api", string>>;
+
 export default function Register() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
+
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
-  const [errors, setErrors] = useState<
-    {
-      confirmPassword: string;
-      apiResponse?: string;
-    } & ClerkInputFieldErrorTypes
-  >({
-    identifier: "",
-    email_address: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [errors, setErrors] = useState<SignUpErrors>({});
   const [credentials, setCredentials] = useState({
-    email: "",
+    emailAddress: "",
     password: "",
     confirmPassword: "",
   });
@@ -45,17 +41,16 @@ export default function Register() {
   const handleRegister = async () => {
     if (!isLoaded) return;
 
+    setErrors({});
+
     if (credentials.confirmPassword !== credentials.password) {
-      setErrors({
-        ...errors,
-        confirmPassword: "Passwords do not match",
-      });
+      setErrors({ confirmPassword: "Passwords do not match" });
       return;
     }
 
     try {
       await signUp.create({
-        emailAddress: credentials.email,
+        emailAddress: credentials.emailAddress,
         password: credentials.password,
       });
 
@@ -66,30 +61,44 @@ export default function Register() {
       setPendingVerification(true);
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
-        setErrors({
-          ...errors,
-          ...clerkErrorMapping(err),
-        });
+        const mappedErrors = clerkErrorMapping(err);
+        const newErrors: SignUpErrors = {};
+        if (mappedErrors.email_address)
+          newErrors.emailAddress = mappedErrors.email_address;
+        if (mappedErrors.password) newErrors.password = mappedErrors.password;
+        if (Object.keys(newErrors).length === 0) {
+          newErrors.api =
+            err.errors[0]?.longMessage ?? "An unknown error occurred.";
+        }
+        setErrors(newErrors);
+      } else {
+        console.error(JSON.stringify(err, null, 2));
+        setErrors({ api: "An unknown error occurred. Please try again." });
       }
     }
   };
 
   const onVerifyPress = async () => {
     if (!isLoaded) return;
-
+    setErrors({});
     try {
       const signUpAttempt = await signUp.attemptEmailAddressVerification({
         code,
       });
 
       if (signUpAttempt.status === "complete") {
-        await setActive({ session: signUpAttempt.createdSessionId });
+        await setActive({ session: signUpAttempt.createdSessionId! });
         router.replace("/(tabs)");
       } else {
-        console.log(JSON.stringify(signUpAttempt, null, 2));
+        console.error(JSON.stringify(signUpAttempt, null, 2));
       }
     } catch (err) {
-      console.log(JSON.stringify(err, null, 2));
+      console.error(JSON.stringify(err, null, 2));
+      if (isClerkAPIResponseError(err)) {
+        setErrors({ api: err.errors[0].longMessage });
+      } else {
+        setErrors({ api: "Verification failed. Please try again." });
+      }
     }
   };
 
@@ -153,9 +162,9 @@ export default function Register() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
-                value={credentials.email}
+                value={credentials.emailAddress}
                 onChangeText={handleChangeText("email")}
-                errorMessage={errors.email_address}
+                errorMessage={errors.emailAddress}
               />
               <TextInputField
                 placeholder="Password"
@@ -260,5 +269,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     fontFamily: fontsFamily.regular,
+  },
+  secondaryButton: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
   },
 });
