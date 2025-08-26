@@ -71,8 +71,16 @@ export default function TabsLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarShowLabel: true,
+            // tabBarShowLabel: false,
             headerShown: tab.headerShow,
+            headerStyle: {
+              backgroundColor: Colors[colorScheme].background,
+            },
+            headerTintColor: Colors[colorScheme].text,
+            headerTitleStyle: {
+              fontWeight: "bold",
+              fontSize: 20,
+            },
             tabBarButton: (props) => (
               <TabBarButton {...props} icon={tab.icon} />
             ),

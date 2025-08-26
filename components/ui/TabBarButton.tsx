@@ -63,7 +63,7 @@ export const TabBarButton = ({
       <Animated.View style={[styles.iconContainer, animatedContainerStyle]}>
         {React.cloneElement(IconComponent, {
           color: isSelected
-            ? Colors[colorScheme].background
+            ? Colors[colorScheme].white
             : Colors[colorScheme].icon,
           size: isSelected ? 28 : 24,
           marginTop: !isSelected ? 12 : 0,

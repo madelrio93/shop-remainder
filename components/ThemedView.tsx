@@ -11,7 +11,7 @@ export type ThemedViewProps = ViewProps & {
 
 export function ThemedView({
   style,
-  safe,
+  safe = false,
   lightColor,
   darkColor,
   ...otherProps
@@ -22,7 +22,7 @@ export function ThemedView({
   );
   const insets = useSafeAreaInsets();
 
-  const paddingStyle = !safe
+  const paddingStyle = safe
     ? {
         paddingTop: insets.top,
         paddingBottom: insets.bottom,
