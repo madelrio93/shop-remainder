@@ -40,6 +40,7 @@ export default function RootLayout() {
       <ClerkProvider tokenCache={tokenCache}>
         <Stack>
           <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
       </ClerkProvider>
